@@ -1079,7 +1079,8 @@
                 <div style="margin-top:10px">
                     <div
                         style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between">
-                        <span>savings growth</span><span style="color:var(--green)" id="sav-trend-mini">—</span></div>
+                        <span>savings growth</span><span style="color:var(--green)" id="sav-trend-mini">—</span>
+                    </div>
                     <canvas id="line-chart-mini" width="400" height="60" style="width:100%"></canvas>
                 </div>
             </div>
@@ -1518,20 +1519,164 @@
             { steps: 5100, sleep_hrs: 6.5, sleep_quality: 'Fair', weight_lbs: 172.3, active_calories: 310, date: '2026-03-18' },
             { steps: 9850, sleep_hrs: 7.8, sleep_quality: 'Good', weight_lbs: 171.9, active_calories: 620, date: '2026-03-19' },
         ];
-        const DEMO_WORKOUTS = [
-            { workout_type: 'Push', duration_min: 62, volume_lbs: 14200, date: '2026-02-24', notes: 'Bench 185x5' },
-            { workout_type: 'Pull', duration_min: 55, volume_lbs: 12800, date: '2026-02-25', notes: 'Pulldown 140x8' },
-            { workout_type: 'Legs', duration_min: 70, volume_lbs: 18400, date: '2026-02-26', notes: '' },
-            { workout_type: 'Push', duration_min: 58, volume_lbs: 13800, date: '2026-03-03', notes: '' },
-            { workout_type: 'Pull', duration_min: 52, volume_lbs: 12200, date: '2026-03-04', notes: 'Curl 60x10' },
-            { workout_type: 'Legs', duration_min: 65, volume_lbs: 17900, date: '2026-03-05', notes: '' },
-            { workout_type: 'Push', duration_min: 60, volume_lbs: 14500, date: '2026-03-10', notes: '' },
-            { workout_type: 'Pull', duration_min: 56, volume_lbs: 13100, date: '2026-03-11', notes: '' },
-            { workout_type: 'Legs', duration_min: 72, volume_lbs: 19000, date: '2026-03-12', notes: '' },
-            { workout_type: 'Push', duration_min: 62, volume_lbs: 14700, date: '2026-03-17', notes: 'Bench 190x3' },
-            { workout_type: 'Pull', duration_min: 58, volume_lbs: 13400, date: '2026-03-18', notes: '' },
-            { workout_type: 'Legs', duration_min: 70, volume_lbs: 18800, date: '2026-03-19', notes: '' },
+        // Raw Hevy CSV demo rows (one row per set, matching your actual export format)
+        const DEMO_HEVY_ROWS = [
+            { title: 'Push (Mon + Thu)', start_time: '03 Mar 2026, 07:00', end_time: '03 Mar 2026, 08:05', exercise_title: 'Bench Press (Barbell)', set_index: 0, weight_lbs: 135, reps: 10 },
+            { title: 'Push (Mon + Thu)', start_time: '03 Mar 2026, 07:00', end_time: '03 Mar 2026, 08:05', exercise_title: 'Bench Press (Barbell)', set_index: 1, weight_lbs: 155, reps: 8 },
+            { title: 'Push (Mon + Thu)', start_time: '03 Mar 2026, 07:00', end_time: '03 Mar 2026, 08:05', exercise_title: 'Bench Press (Barbell)', set_index: 2, weight_lbs: 165, reps: 6 },
+            { title: 'Push (Mon + Thu)', start_time: '03 Mar 2026, 07:00', end_time: '03 Mar 2026, 08:05', exercise_title: 'Overhead Press (Barbell)', set_index: 0, weight_lbs: 85, reps: 10 },
+            { title: 'Push (Mon + Thu)', start_time: '03 Mar 2026, 07:00', end_time: '03 Mar 2026, 08:05', exercise_title: 'Overhead Press (Barbell)', set_index: 1, weight_lbs: 95, reps: 8 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'Lat Pulldown (Cable)', set_index: 0, weight_lbs: 90, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'Lat Pulldown (Cable)', set_index: 1, weight_lbs: 90, reps: 12 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'Lat Pulldown (Cable)', set_index: 2, weight_lbs: 100, reps: 7 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'EZ Bar Biceps Curl', set_index: 0, weight_lbs: 40, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'EZ Bar Biceps Curl', set_index: 1, weight_lbs: 40, reps: 15 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'Back Extension (Weighted Hyperextension)', set_index: 0, weight_lbs: 25, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '04 Mar 2026, 07:00', end_time: '04 Mar 2026, 07:58', exercise_title: 'Back Extension (Weighted Hyperextension)', set_index: 1, weight_lbs: 25, reps: 13 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'Lat Pulldown (Cable)', set_index: 0, weight_lbs: 90, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'Lat Pulldown (Cable)', set_index: 1, weight_lbs: 90, reps: 12 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'Lat Pulldown (Cable)', set_index: 2, weight_lbs: 100, reps: 7 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'EZ Bar Biceps Curl', set_index: 0, weight_lbs: 40, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'EZ Bar Biceps Curl', set_index: 1, weight_lbs: 40, reps: 15 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'EZ Bar Biceps Curl', set_index: 2, weight_lbs: 50, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'Back Extension (Weighted Hyperextension)', set_index: 0, weight_lbs: 25, reps: 10 },
+            { title: 'Pull (Tue + Fri)', start_time: '17 Mar 2026, 18:40', end_time: '17 Mar 2026, 19:20', exercise_title: 'Back Extension (Weighted Hyperextension)', set_index: 1, weight_lbs: 25, reps: 13 },
         ];
+
+        // Exercise → muscle group mapping (expand as needed)
+        const EXERCISE_MUSCLE = {
+            'bench press': 'Chest',
+            'incline': 'Chest',
+            'chest fly': 'Chest',
+            'cable fly': 'Chest',
+            'pec deck': 'Chest',
+            'overhead press': 'Shoulders',
+            'lateral raise': 'Shoulders',
+            'shoulder press': 'Shoulders',
+            'front raise': 'Shoulders',
+            'tricep': 'Triceps',
+            'skull crusher': 'Triceps',
+            'pushdown': 'Triceps',
+            'dip': 'Triceps',
+            'lat pulldown': 'Back',
+            'pulldown': 'Back',
+            'row': 'Back',
+            'pull-up': 'Back',
+            'pullup': 'Back',
+            'chin-up': 'Back',
+            'shrug': 'Back',
+            'deadlift': 'Back',
+            'curl': 'Biceps',
+            'bicep': 'Biceps',
+            'hammer curl': 'Biceps',
+            'back extension': 'Lower back',
+            'hyperextension': 'Lower back',
+            'good morning': 'Lower back',
+            'squat': 'Legs',
+            'leg press': 'Legs',
+            'lunge': 'Legs',
+            'leg curl': 'Legs',
+            'leg extension': 'Legs',
+            'calf': 'Legs',
+            'rdl': 'Legs',
+            'romanian': 'Legs',
+        };
+
+        function getMuscle(exerciseTitle) {
+            const lower = (exerciseTitle || '').toLowerCase();
+            for (const [key, muscle] of Object.entries(EXERCISE_MUSCLE)) {
+                if (lower.includes(key)) return muscle;
+            }
+            return 'Other';
+        }
+
+        function getPPLType(workoutTitle) {
+            const lower = (workoutTitle || '').toLowerCase();
+            if (lower.includes('push')) return 'Push';
+            if (lower.includes('pull')) return 'Pull';
+            if (lower.includes('leg')) return 'Legs';
+            if (lower.includes('rest')) return 'Rest';
+            if (lower.includes('cardio')) return 'Cardio';
+            return 'Other';
+        }
+
+        function parseHevyDate(str) {
+            // "17 Mar 2026, 18:40" → Date object
+            if (!str) return null;
+            try { return new Date(str.replace(',', '')); } catch { return null; }
+        }
+
+        // Convert raw set rows → array of workout session summaries
+        function summariseWorkouts(rows) {
+            const sessions = {};
+            rows.forEach(r => {
+                const start = parseHevyDate(r.start_time);
+                if (!start) return;
+                const dateKey = start.toISOString().substring(0, 10);
+                const sessionKey = r.title + '||' + dateKey;
+                if (!sessions[sessionKey]) {
+                    const end = parseHevyDate(r.end_time);
+                    const durMin = (start && end) ? Math.round((end - start) / 60000) : 0;
+                    sessions[sessionKey] = {
+                        title: r.title,
+                        workout_type: getPPLType(r.title),
+                        date: dateKey,
+                        duration_min: durMin,
+                        volume_lbs: 0,
+                        sets: 0,
+                        exercises: {}
+                    };
+                }
+                const w = parseFloat(r.weight_lbs) || 0;
+                const rp = parseInt(r.reps) || 0;
+                sessions[sessionKey].volume_lbs += w * rp;
+                sessions[sessionKey].sets += 1;
+                const ex = r.exercise_title || '';
+                if (!sessions[sessionKey].exercises[ex]) sessions[sessionKey].exercises[ex] = [];
+                sessions[sessionKey].exercises[ex].push({ w, rp });
+            });
+            return Object.values(sessions).sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        // Estimate 1RM using Epley formula: w * (1 + reps/30)
+        function epley1RM(sets) {
+            if (!sets || !sets.length) return 0;
+            return Math.max(...sets.map(s => s.rp > 0 ? Math.round(s.w * (1 + s.rp / 30)) : s.w));
+        }
+
+        // Get best 1RM for a specific exercise keyword across all raw rows
+        function best1RM(rows, keyword) {
+            const matching = rows.filter(r => (r.exercise_title || '').toLowerCase().includes(keyword.toLowerCase()));
+            if (!matching.length) return null;
+            return Math.max(...matching.map(r => {
+                const w = parseFloat(r.weight_lbs) || 0;
+                const rp = parseInt(r.reps) || 0;
+                return rp > 0 ? Math.round(w * (1 + rp / 30)) : w;
+            }));
+        }
+
+        // Volume per muscle group across a set of raw rows
+        function volumeByMuscle(rows) {
+            const map = {};
+            rows.forEach(r => {
+                const muscle = getMuscle(r.exercise_title);
+                if (muscle === 'Other') return;
+                map[muscle] = (map[muscle] || 0) + (parseFloat(r.weight_lbs) || 0) * (parseInt(r.reps) || 0);
+            });
+            return map;
+        }
+
+        // Sets per muscle group
+        function setsByMuscle(rows) {
+            const map = {};
+            rows.forEach(r => {
+                const muscle = getMuscle(r.exercise_title);
+                if (muscle === 'Other') return;
+                if (!map[muscle]) map[muscle] = new Set();
+                map[muscle].add(r.exercise_title + '||' + r.set_index);
+            });
+            return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v.size]));
+        }
         const DEMO_FINANCE = [
             { week_start: '2026-02-03', total_spent: 92.10, food: 38, transport: 14, shopping: 26, other: 14.10, savings_balance: 1100, savings_goal: 2000 },
             { week_start: '2026-02-10', total_spent: 78.40, food: 29, transport: 10, shopping: 22, other: 17.40, savings_balance: 1160, savings_goal: 2000 },
@@ -1593,26 +1738,53 @@
 
         async function loadWorkouts() {
             const rows = await fetchSheet('workouts');
-            cachedWorkouts = rows && rows.length ? rows : DEMO_WORKOUTS;
-            const src = cachedWorkouts;
+            const rawRows = rows && rows.length ? rows : DEMO_HEVY_ROWS;
+            cachedWorkouts = rawRows;
+
+            const sessions = summariseWorkouts(rawRows);
+            if (!sessions.length) return;
+
+            const last = sessions[sessions.length - 1];
             const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
-            const last = src[src.length - 1];
-            const lastIdx = PPL_SEQ.indexOf(last.workout_type || '');
+            const lastIdx = PPL_SEQ.indexOf(last.workout_type);
             const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
             const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-            document.getElementById('ppl-grid').innerHTML = days7.map((d, i) => { const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length]; const isT = i === todayIdx; return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`; }).join('');
+            document.getElementById('ppl-grid').innerHTML = days7.map((d, i) => {
+                const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length], isT = i === todayIdx;
+                return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`;
+            }).join('');
             document.getElementById('ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
+
             const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
-            document.getElementById('week-sess').textContent = src.filter(r => new Date(r.date) >= ws).length;
-            document.getElementById('streak-num').textContent = Math.min(src.length, 12);
+            document.getElementById('week-sess').textContent = sessions.filter(s => new Date(s.date) >= ws).length;
+            document.getElementById('streak-num').textContent = Math.min(sessions.length, 12);
             document.getElementById('last-type').textContent = last.workout_type || '—';
-            document.getElementById('last-detail').textContent = `${last.duration_min || '—'} min · ${last.volume_lbs ? parseInt(last.volume_lbs).toLocaleString() + ' lbs' : '—'}`;
+            document.getElementById('last-detail').textContent = `${last.duration_min || '—'} min · ${last.volume_lbs ? Math.round(last.volume_lbs).toLocaleString() + ' lbs' : '—'}`;
             const diffD = Math.floor((Date.now() - new Date(last.date)) / 86400000);
             document.getElementById('last-when').textContent = diffD === 0 ? 'today' : diffD === 1 ? 'yesterday' : `${diffD}d ago`;
-            const volMap = {}; src.slice(-14).forEach(r => { (MUSC_MAP[r.workout_type] || []).forEach(m => { volMap[m] = (volMap[m] || 0) + Math.round((r.volume_lbs || 0) / 1500); }); });
+
+            // Weekly sets by muscle from raw exercise names
+            const weekRows = rawRows.filter(r => { const d = parseHevyDate(r.start_time); return d && d >= ws; });
+            const setsMap = setsByMuscle(weekRows);
             const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
-            const mx = Math.max(...mOrder.map(m => volMap[m] || 0), 1);
-            document.getElementById('vol-bars').innerHTML = mOrder.map(m => { const v = volMap[m] || 0; return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m] || 'var(--muted2)'}"></div></div><span class="vol-num">${v} sets</span></div>`; }).join('');
+            const mx = Math.max(...mOrder.map(m => setsMap[m] || 0), 1);
+            document.getElementById('vol-bars').innerHTML = mOrder.map(m => {
+                const v = setsMap[m] || 0;
+                return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m] || 'var(--muted2)'}"></div></div><span class="vol-num">${v} sets</span></div>`;
+            }).join('');
+
+            // 1RM from real exercise names via Epley formula
+            const benchRM = best1RM(rawRows, 'bench press');
+            const curlRM = best1RM(rawRows, 'curl');
+            const pullRM = best1RM(rawRows, 'lat pulldown') || best1RM(rawRows, 'pulldown');
+            const backRM = best1RM(rawRows, 'back extension') || best1RM(rawRows, 'hyperextension');
+            document.getElementById('lifts-grid').innerHTML = [
+                { name: 'Bench', val: benchRM }, { name: 'Curl', val: curlRM },
+                { name: 'Pulldown', val: pullRM }, { name: 'Back ext.', val: backRM }
+            ].map(l => {
+                const trend = l.val ? `<div class="lift-trend" style="color:var(--green)">Epley 1RM</div>` : `<div class="lift-trend" style="color:var(--muted2)">no data yet</div>`;
+                return `<div class="lift-card"><div class="lift-name">${l.name}</div><div class="lift-val">${l.val || '—'}<span class="lift-u">lbs</span></div>${trend}</div>`;
+            }).join('');
         }
 
         async function loadTasks() {
@@ -1669,36 +1841,83 @@
 
         /* ── DETAIL PAGE BUILDERS ── */
         function buildFitnessDetail() {
-            const src = cachedWorkouts || DEMO_WORKOUTS;
+            const rawRows = cachedWorkouts || DEMO_HEVY_ROWS;
+            const sessions = summariseWorkouts(rawRows);
             document.getElementById('fit-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
             const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
-            const thisWeek = src.filter(r => new Date(r.date) >= ws);
-            document.getElementById('d-sessions').textContent = thisWeek.length;
-            const totalVol = thisWeek.reduce((s, r) => s + (parseInt(r.volume_lbs) || 0), 0);
-            document.getElementById('d-vol-total').innerHTML = `${totalVol.toLocaleString()}<span class="stat-u">lbs</span>`;
+            const thisWeekSessions = sessions.filter(s => new Date(s.date) >= ws);
+            document.getElementById('d-sessions').textContent = thisWeekSessions.length;
+            const totalVol = thisWeekSessions.reduce((s, r) => s + r.volume_lbs, 0);
+            document.getElementById('d-vol-total').innerHTML = `${Math.round(totalVol).toLocaleString()}<span class="stat-u">lbs</span>`;
+
+            // PPL grid
+            const last = sessions[sessions.length - 1] || { workout_type: 'Push' };
             const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
-            const last = src[src.length - 1];
-            const lastIdx = PPL_SEQ.indexOf(last.workout_type || '');
+            const lastIdx = PPL_SEQ.indexOf(last.workout_type);
             const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
             const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-            document.getElementById('d-ppl-grid').innerHTML = days7.map((d, i) => { const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length]; const isT = i === todayIdx; return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`; }).join('');
+            document.getElementById('d-ppl-grid').innerHTML = days7.map((d, i) => {
+                const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length], isT = i === todayIdx;
+                return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`;
+            }).join('');
             document.getElementById('d-ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
-            document.getElementById('d-workout-log').innerHTML = src.slice(-5).reverse().map(r => { const dt = new Date(r.date); const ds = `${dt.getMonth() + 1}/${dt.getDate()}`; return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px"><span style="color:${PPL_CLR[r.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${r.workout_type}</span><span>${r.duration_min || '—'}min</span><span style="color:var(--muted);font-family:var(--mono);font-size:10px">${ds}</span></div>`; }).join('');
-            const volMap = {};
-            src.slice(-28).forEach(r => { (MUSC_MAP[r.workout_type] || []).forEach(m => { volMap[m] = (volMap[m] || 0) + Math.round((r.volume_lbs || 0) / 1500); }); });
+
+            // Recent session log
+            document.getElementById('d-workout-log').innerHTML = sessions.slice(-5).reverse().map(s => {
+                const dt = new Date(s.date); const ds = `${dt.getMonth() + 1}/${dt.getDate()}`;
+                return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px"><span style="color:${PPL_CLR[s.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${s.workout_type}</span><span>${s.duration_min || '—'}min</span><span style="color:var(--muted);font-family:var(--mono);font-size:10px">${ds}</span></div>`;
+            }).join('');
+
+            // 4-week sets by muscle
+            const fourWeeksAgo = new Date(now); fourWeeksAgo.setDate(now.getDate() - 28);
+            const recentRows = rawRows.filter(r => { const d = parseHevyDate(r.start_time); return d && d >= fourWeeksAgo; });
+            const setsMap = setsByMuscle(recentRows);
             const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
-            const mx = Math.max(...mOrder.map(m => volMap[m] || 0), 1);
-            document.getElementById('d-vol-bars-detail').innerHTML = mOrder.map(m => { const v = volMap[m] || 0; return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track" style="height:7px"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m]}"></div></div><span class="vol-num">${v} sets</span></div>`; }).join('');
-            const byWeek = {}; src.forEach(r => { const d = new Date(r.date), wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); const key = wk.toISOString().substring(0, 10); byWeek[key] = (byWeek[key] || 0) + (parseInt(r.volume_lbs) || 0); });
+            const mx = Math.max(...mOrder.map(m => setsMap[m] || 0), 1);
+            document.getElementById('d-vol-bars-detail').innerHTML = mOrder.map(m => {
+                const v = setsMap[m] || 0;
+                return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track" style="height:7px"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m]}"></div></div><span class="vol-num">${v} sets</span></div>`;
+            }).join('');
+
+            // Weekly volume chart from session summaries
+            const byWeek = {};
+            sessions.forEach(s => {
+                const d = new Date(s.date), wk = new Date(d); wk.setDate(d.getDate() - d.getDay());
+                const key = wk.toISOString().substring(0, 10);
+                byWeek[key] = (byWeek[key] || 0) + s.volume_lbs;
+            });
             const wkKeys = Object.keys(byWeek).sort().slice(-8);
             const wkVols = wkKeys.map(k => byWeek[k]);
-            if (wkVols.length >= 2) { const diff = wkVols[wkVols.length - 1] - wkVols[0]; document.getElementById('d-vol-trend-lbl').textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' lbs trend'; }
+            if (wkVols.length >= 2) { const diff = wkVols[wkVols.length - 1] - wkVols[0]; document.getElementById('d-vol-trend-lbl').textContent = (diff >= 0 ? '+' : '') + Math.round(diff).toLocaleString() + ' lbs trend'; }
             setTimeout(() => {
                 drawLineCanvas('d-vol-chart', wkVols, null, '#a78bfa', true);
                 const lblEl = document.getElementById('d-vol-labels');
                 if (lblEl) lblEl.innerHTML = wkKeys.map(k => `<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${k.substring(5)}</span>`).join('');
             }, 100);
-            document.getElementById('d-workout-table').innerHTML = src.slice().reverse().map(r => { const dt = new Date(r.date); return `<tr><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${dt.getMonth() + 1}/${dt.getDate()}</td><td><span style="color:${PPL_CLR[r.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${r.workout_type || '—'}</span></td><td class="num-cell" style="color:var(--muted2)">${r.duration_min || '—'}min</td><td class="num-cell">${r.volume_lbs ? parseInt(r.volume_lbs).toLocaleString() : '—'} lbs</td><td style="color:var(--muted2);font-size:11px">${r.notes || ''}</td></tr>`; }).join('');
+
+            // Full workout history table — one row per session, showing exercises
+            document.getElementById('d-workout-table').innerHTML = sessions.slice().reverse().map(s => {
+                const dt = new Date(s.date);
+                const exList = Object.keys(s.exercises).slice(0, 3).join(', ') + (Object.keys(s.exercises).length > 3 ? '…' : '');
+                return `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${dt.getMonth() + 1}/${dt.getDate()}</td>
+      <td><span style="color:${PPL_CLR[s.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${s.workout_type}</span></td>
+      <td class="num-cell" style="color:var(--muted2)">${s.duration_min || '—'}min</td>
+      <td class="num-cell">${Math.round(s.volume_lbs).toLocaleString()} lbs</td>
+      <td style="color:var(--muted2);font-size:11px">${exList}</td>
+    </tr>`;
+            }).join('');
+
+            // 1RM cards in detail header
+            const benchRM = best1RM(rawRows, 'bench press');
+            const curlRM = best1RM(rawRows, 'curl');
+            const pullRM = best1RM(rawRows, 'lat pulldown') || best1RM(rawRows, 'pulldown');
+            const backRM = best1RM(rawRows, 'back extension') || best1RM(rawRows, 'hyperextension');
+            [['d-bench', benchRM], ['d-curl', curlRM], ['d-pull', pullRM], ['d-back', backRM]].forEach(([id, val]) => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = `${val || '—'}<span class="stat-u">lbs</span>`;
+            });
         }
 
         function buildFinanceDetail() {
