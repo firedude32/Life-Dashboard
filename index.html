@@ -1848,7 +1848,9 @@
                 const muscle = getMuscle(r.exercise_title);
                 if (muscle === 'Other') return;
                 if (!map[muscle]) map[muscle] = new Set();
-                map[muscle].add(r.exercise_title + '||' + r.set_index);
+                // Include date in key so same set_index across sessions counts separately
+                const sessionKey = (r.start_time || r.date || '') + '||' + r.exercise_title + '||' + r.set_index;
+                map[muscle].add(sessionKey);
             });
             return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v.size]));
         }
@@ -1911,6 +1913,92 @@
             }
         }
 
+
+        // Build PPL grid anchored to real calendar dates with Sunday always Rest
+        // Sessions are looked up by actual date — skipped days show correctly
+        function buildPPLGrid(sessions, gridId = 'ppl-grid', nextId = 'ppl-next') {
+            const today = new Date();
+            const todayStr = dateToStr(today);
+            const dow = today.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+
+            // Get Mon of this week
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+
+            // Build a map of date → workout_type from actual sessions
+            const sessionMap = {};
+            sessions.forEach(s => { sessionMap[s.date] = s.workout_type; });
+
+            // Determine next scheduled type by walking back from today through actual sessions
+            // Find the most recent actual workout and advance the sequence from there
+            const PPL_ACTIVE = ['Push', 'Pull', 'Legs']; // cycling sequence (no Rest in sequence)
+            let nextType = 'Push'; // default
+            const pastSessions = sessions.filter(s => s.date <= todayStr && PPL_ACTIVE.includes(s.workout_type));
+            if (pastSessions.length > 0) {
+                const lastActual = pastSessions[pastSessions.length - 1];
+                const idx = PPL_ACTIVE.indexOf(lastActual.workout_type);
+                nextType = PPL_ACTIVE[(idx + 1) % PPL_ACTIVE.length];
+            }
+
+            // Fill Mon–Sat with actual or projected types, Sun always Rest
+            const days7Labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            const cells = [];
+            let projectedType = nextType;
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                const dStr = dateToStr(d);
+                const isSun = d.getDay() === 0;
+                const isToday = dStr === todayStr;
+                const isPast = dStr < todayStr;
+                const isFuture = dStr > todayStr;
+
+                let type, style;
+                if (isSun) {
+                    type = 'Rest';
+                    style = `color:${PPL_CLR['Rest']}`;
+                } else if (sessionMap[dStr]) {
+                    // Actual workout recorded
+                    type = sessionMap[dStr];
+                    style = `color:${PPL_CLR[type] || 'var(--muted)'}`;
+                } else if (isPast) {
+                    // Missed day — show dash
+                    type = '—';
+                    style = 'color:var(--muted);opacity:.4';
+                } else {
+                    // Future projected day
+                    type = projectedType;
+                    style = `color:${PPL_CLR[type] || 'var(--muted)'};opacity:.5`;
+                    // Advance projection for next future non-Sunday
+                    if (!isSun) {
+                        const nextIdx = PPL_ACTIVE.indexOf(projectedType);
+                        projectedType = PPL_ACTIVE[(nextIdx + 1) % PPL_ACTIVE.length];
+                    }
+                }
+
+                cells.push(`<div class="ppl-cell${isToday ? ' today' : ''}">
+      <div class="ppl-d">${days7Labels[i]}</div>
+      <div class="ppl-t" style="${style}">${type === '—' ? '—' : type.substring(0, 3)}</div>
+    </div>`);
+            }
+
+            const gridEl = document.getElementById(gridId);
+            if (gridEl) gridEl.innerHTML = cells.join('');
+
+            // "next" label — what's the next non-Rest scheduled day
+            const nextEl = document.getElementById(nextId);
+            if (nextEl) {
+                // Find next future workout day
+                for (let i = 1; i <= 7; i++) {
+                    const d = new Date(today); d.setDate(today.getDate() + i);
+                    if (d.getDay() === 0) continue; // skip Sunday
+                    nextEl.textContent = `next: ${sessionMap[dateToStr(d)] || nextType}`;
+                    break;
+                }
+            }
+        }
+
         async function loadWorkouts() {
             const rows = await fetchSheet('workouts');
             const rawRows = rows && rows.length ? rows : DEMO_HEVY_ROWS;
@@ -1919,19 +2007,12 @@
             const sessions = summariseWorkouts(rawRows);
             if (!sessions.length) return;
 
-            const last = sessions[sessions.length - 1];
-            const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
-            const lastIdx = PPL_SEQ.indexOf(last.workout_type);
-            const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
-            const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-            document.getElementById('ppl-grid').innerHTML = days7.map((d, i) => {
-                const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length], isT = i === todayIdx;
-                return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`;
-            }).join('');
-            document.getElementById('ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
+            buildPPLGrid(sessions);
 
-            const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
-            document.getElementById('week-sess').textContent = sessions.filter(s => new Date(s.date) >= ws).length;
+            const now = new Date();
+            const wsMon = new Date(now); wsMon.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+            wsMon.setHours(0, 0, 0, 0);
+            document.getElementById('week-sess').textContent = sessions.filter(s => new Date(s.date) >= wsMon).length;
             document.getElementById('streak-num').textContent = Math.min(sessions.length, 12);
             document.getElementById('last-type').textContent = last.workout_type || '—';
             document.getElementById('last-detail').textContent = `${last.duration_min || '—'} min · ${last.volume_lbs ? Math.round(last.volume_lbs).toLocaleString() + ' lbs' : '—'}`;
@@ -1939,7 +2020,7 @@
             document.getElementById('last-when').textContent = diffD === 0 ? 'today' : diffD === 1 ? 'yesterday' : `${diffD}d ago`;
 
             // Weekly sets by muscle from raw exercise names
-            const weekRows = rawRows.filter(r => { const d = parseHevyDate(r.start_time); return d && d >= ws; });
+            const weekRows = rawRows.filter(r => { const d = parseHevyDate(r.start_time); return d && d >= wsMon; });
             const setsMap = setsByMuscle(weekRows);
             const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
             const mx = Math.max(...mOrder.map(m => setsMap[m] || 0), 1);
@@ -2021,22 +2102,13 @@
             document.getElementById('fit-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
             const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
-            const thisWeekSessions = sessions.filter(s => new Date(s.date) >= ws);
+            const wsMonFit = new Date(now); wsMonFit.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)); wsMonFit.setHours(0, 0, 0, 0);
+            const thisWeekSessions = sessions.filter(s => new Date(s.date) >= wsMonFit);
             document.getElementById('d-sessions').textContent = thisWeekSessions.length;
             const totalVol = thisWeekSessions.reduce((s, r) => s + r.volume_lbs, 0);
             document.getElementById('d-vol-total').innerHTML = `${Math.round(totalVol).toLocaleString()}<span class="stat-u">lbs</span>`;
 
-            // PPL grid
-            const last = sessions[sessions.length - 1] || { workout_type: 'Push' };
-            const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
-            const lastIdx = PPL_SEQ.indexOf(last.workout_type);
-            const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
-            const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-            document.getElementById('d-ppl-grid').innerHTML = days7.map((d, i) => {
-                const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length], isT = i === todayIdx;
-                return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`;
-            }).join('');
-            document.getElementById('d-ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
+            buildPPLGrid(sessions, 'd-ppl-grid', 'd-ppl-next');
 
             // Recent session log
             document.getElementById('d-workout-log').innerHTML = sessions.slice(-5).reverse().map(s => {
@@ -2046,7 +2118,7 @@
 
             // 4-week sets by muscle
             const fourWeeksAgo = new Date(now); fourWeeksAgo.setDate(now.getDate() - 28);
-            const recentRows = rawRows.filter(r => { const d = parseHevyDate(r.start_time); return d && d >= fourWeeksAgo; });
+            const recentRows = rawRows.filter(r => { const start = parseHevyDate(r.start_time); return start && start >= fourWeeksAgo; });
             const setsMap = setsByMuscle(recentRows);
             const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
             const mx = Math.max(...mOrder.map(m => setsMap[m] || 0), 1);
@@ -2210,19 +2282,36 @@
             return rows;
         })();
 
-        function getTodayStr() { return new Date().toISOString().substring(0, 10); }
+        function getTodayStr() {
+            const d = new Date();
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const dy = String(d.getDate()).padStart(2, '0');
+            return `${yr}-${mo}-${dy}`;
+        }
+        function dateToStr(d) {
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const dy = String(d.getDate()).padStart(2, '0');
+            return `${yr}-${mo}-${dy}`;
+        }
 
         function calcStreak(rows, key) {
             const sorted = [...rows].sort((a, b) => b.date.localeCompare(a.date));
+            const today = getTodayStr();
+            const yesterday = dateToStr(new Date(new Date().setDate(new Date().getDate() - 1)));
+            // Start from today if logged, otherwise start from yesterday (don't penalise mid-day)
+            const todayRow = sorted.find(r => r.date === today);
+            const todayDone = todayRow && parseInt(todayRow[key]) === 1;
+            let checkFrom = todayDone ? today : yesterday;
             let streak = 0;
-            let prev = getTodayStr();
             for (const r of sorted) {
-                const expected = prev;
-                if (r.date !== expected) break;
+                if (r.date > checkFrom) continue;
+                if (r.date !== checkFrom) break;
                 if (parseInt(r[key]) !== 1) break;
                 streak++;
                 const d = new Date(r.date); d.setDate(d.getDate() - 1);
-                prev = d.toISOString().substring(0, 10);
+                checkFrom = dateToStr(d);
             }
             return streak;
         }
@@ -2246,27 +2335,18 @@
 
         async function logHabit(key, done, btn) {
             const today = getTodayStr();
-            if (SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                // Update local cache only for demo
-                if (cachedHabits) {
-                    const row = cachedHabits.find(r => r.date === today);
-                    if (row) row[key] = done ? 1 : 0;
-                    else cachedHabits.push({ date: today, bible: 0, prayer: 0, latin: 0, [key]: done ? 1 : 0 });
-                }
-                refreshHabitsMain();
-                return;
-            }
-            btn.style.opacity = '0.5';
+            // Optimistically update local cache immediately for snappy UI
+            if (!cachedHabits) cachedHabits = [];
+            const existingRow = cachedHabits.find(r => r.date === today);
+            if (existingRow) existingRow[key] = done ? 1 : 0;
+            else cachedHabits.push({ date: today, bible: 0, prayer: 0, latin: 0, [key]: done ? 1 : 0 });
+            refreshHabitsMain();
+            // Then persist to Sheet in background
+            if (btn) btn.style.opacity = '0.6';
             try {
                 await fetch(`${SCRIPT_URL}?action=habit&date=${today}&key=${key}&val=${done ? 1 : 0}`);
-                if (cachedHabits) {
-                    const row = cachedHabits.find(r => r.date === today);
-                    if (row) row[key] = done ? 1 : 0;
-                    else cachedHabits.push({ date: today, bible: 0, prayer: 0, latin: 0, [key]: done ? 1 : 0 });
-                }
-            } catch (e) { }
-            btn.style.opacity = '1';
-            refreshHabitsMain();
+            } catch (e) { console.warn('Habit save failed:', e); }
+            if (btn) btn.style.opacity = '1';
         }
 
         async function loadHabits() {
@@ -2347,20 +2427,13 @@
                 const d = new Date(); d.setDate(d.getDate() - i);
                 last30.push(d.toISOString().substring(0, 10));
             }
-            const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
             document.getElementById('habits-history-grid').innerHTML = HABITS.map((name, i) => {
                 const key = HABIT_KEYS[i];
                 const cells = last30.map(date => {
                     const row = src.find(r => r.date === date);
                     const done = row && parseInt(row[key]) === 1;
                     const isToday = date === today;
-                    const d = new Date(date);
-                    const title = date;
-                    return `<div class="hgrid-cell${done ? ' done' : ''}${isToday ? ' today' : ''}" title="${title}"></div>`;
-                }).join('');
-                const dayRow = last30.map(date => {
-                    const d = new Date(date);
-                    return `<div class="hgrid-day">${date === today ? '●' : ''}</div>`;
+                    return `<div class="hgrid-cell${done ? ' done' : ''}${isToday ? ' today' : ''}" title="${date}"></div>`;
                 }).join('');
                 return `<div style="margin-bottom:16px">
       <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">${name}</div>
