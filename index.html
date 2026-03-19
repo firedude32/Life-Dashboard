@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0c0e;
+            --s1: #141416;
+            --s2: #1c1c20;
+            --s3: #242428;
+            --b1: rgba(255, 255, 255, 0.06);
+            --b2: rgba(255, 255, 255, 0.13);
+            --b3: rgba(255, 255, 255, 0.2);
+            --text: #e4e4ec;
+            --muted: #4a4a56;
+            --muted2: #7a7a8a;
+            --green: #22c55e;
+            --gbg: rgba(34, 197, 94, 0.12);
+            --yellow: #f59e0b;
+            --ybg: rgba(245, 158, 11, 0.12);
+            --red: #ef4444;
+            --rbg: rgba(239, 68, 68, 0.12);
+            --blue: #60a5fa;
+            --bbg: rgba(96, 165, 250, 0.1);
+            --purple: #a78bfa;
+            --pbg: rgba(167, 139, 250, 0.1);
+            --orange: #fb923c;
+            --obg: rgba(251, 146, 60, 0.1);
+            --mono: 'DM Mono', monospace;
+            --sans: 'Space Grotesk', sans-serif;
+            --r: 12px;
+            --r-sm: 7px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 13px;
+            min-height: 100vh;
+        }
+
+        /* ── ROUTER / TRANSITIONS ── */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100vh;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: all;
+            position: relative;
+        }
+
+        /* ── SHARED HEADER ── */
+        .hdr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .hdr-title {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--purple);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .hdr-r {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hdr-date {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted2);
+        }
+
+        .sync-btn {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 3px 10px;
+            border: 1px solid var(--b1);
+            border-radius: 20px;
+            background: none;
+            transition: border-color .2s;
+        }
+
+        .sync-btn:hover {
+            border-color: var(--b2);
+        }
+
+        .dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .25
+            }
+        }
+
+        .back-btn {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted2);
+            background: none;
+            border: 1px solid var(--b1);
+            border-radius: 20px;
+            padding: 4px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all .2s;
+        }
+
+        .back-btn:hover {
+            border-color: var(--b2);
+            color: var(--text);
+        }
+
+        .detail-title {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* ── SECTION LABEL ── */
+        .sec {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--b1);
+        }
+
+        /* ── GRID ── */
+        .fitness-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .life-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--s1);
+            border: 1px solid var(--b1);
+            border-radius: var(--r);
+            padding: 14px;
+            transition: border-color .2s;
+        }
+
+        .card:hover {
+            border-color: var(--b2);
+        }
+
+        .card.clickable {
+            cursor: pointer;
+        }
+
+        .card.clickable:hover {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 1px rgba(167, 139, 250, .1);
+        }
+
+        .card-purple {
+            background: #2d1f5e;
+            border: 1px solid rgba(167, 139, 250, .25);
+        }
+
+        .card-orange {
+            background: #2e1a0a;
+            border: 1px solid rgba(251, 146, 60, .2);
+        }
+
+        .lbl {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ── DETAIL GRID LAYOUTS ── */
+        .detail-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .detail-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .detail-full {
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: var(--s1);
+            border: 1px solid var(--b1);
+            border-radius: var(--r);
+            padding: 14px;
+        }
+
+        .stat-num {
+            font-family: var(--mono);
+            font-size: 28px;
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .stat-u {
+            font-size: 12px;
+            color: var(--muted2);
+            margin-left: 2px;
+        }
+
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 6px;
+        }
+
+        .stat-sub {
+            font-size: 11px;
+            color: var(--muted2);
+            margin-top: 4px;
+        }
+
+        /* ── CHART CONTAINERS ── */
+        .chart-card {
+            background: var(--s1);
+            border: 1px solid var(--b1);
+            border-radius: var(--r);
+            padding: 14px;
+        }
+
+        .chart-title {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* ── RING ── */
+        .ring-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 6px auto 8px;
+        }
+
+        .ring-inner {
+            position: absolute;
+            text-align: center;
+        }
+
+        .ring-num {
+            font-family: var(--mono);
+            font-size: 22px;
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .ring-sub {
+            font-size: 9px;
+            color: var(--muted2);
+        }
+
+        /* ── PPL ── */
+        .ppl-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-top: 4px;
+        }
+
+        .ppl-cell {
+            border-radius: 5px;
+            padding: 5px 2px;
+            text-align: center;
+            background: var(--s2);
+        }
+
+        .ppl-cell.today {
+            background: var(--s3);
+            outline: 1px solid var(--b2);
+        }
+
+        .ppl-d {
+            font-family: var(--mono);
+            font-size: 7px;
+            color: var(--muted);
+            margin-bottom: 3px;
+        }
+
+        .ppl-t {
+            font-family: var(--mono);
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        /* ── VOL BARS ── */
+        .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 6px;
+        }
+
+        .vol-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .vol-name {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted2);
+            width: 72px;
+            flex-shrink: 0;
+        }
+
+        .vol-track {
+            flex: 1;
+            height: 5px;
+            background: var(--s3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .vol-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .6s;
+        }
+
+        .vol-num {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted2);
+            width: 38px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* ── LIFTS ── */
+        .lifts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+        }
+
+        .lift-card {
+            background: var(--s2);
+            border: 1px solid var(--b1);
+            border-radius: var(--r-sm);
+            padding: 9px;
+        }
+
+        .lift-name {
+            font-family: var(--mono);
+            font-size: 8px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 3px;
+        }
+
+        .lift-val {
+            font-family: var(--mono);
+            font-size: 19px;
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .lift-u {
+            font-size: 10px;
+            color: var(--muted2);
+        }
+
+        .lift-trend {
+            font-size: 10px;
+            margin-top: 3px;
+        }
+
+        /* ── SLEEP BARS ── */
+        .sleep-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 44px;
+            margin-top: 8px;
+        }
+
+        .sb-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            height: 100%;
+            justify-content: flex-end;
+        }
+
+        .sb-bar {
+            width: 100%;
+            border-radius: 2px 2px 0 0;
+            transition: height .5s;
+            min-height: 3px;
+        }
+
+        .sb-day {
+            font-family: var(--mono);
+            font-size: 7px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* ── PROGRESS BARS ── */
+        .bar-wrap {
+            height: 3px;
+            background: var(--s3);
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width .7s;
+        }
+
+        .big-num {
+            font-family: var(--mono);
+            font-size: 26px;
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .big-u {
+            font-size: 11px;
+            color: var(--muted2);
+            margin-left: 2px;
+        }
+
+        .sub {
+            font-size: 11px;
+            color: var(--muted2);
+            margin-top: 3px;
+        }
+
+        /* ── TASKS ── */
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 4px;
+            border-bottom: 1px solid var(--b1);
+            border-radius: 5px;
+            transition: background .1s;
+        }
+
+        .task-row:last-child {
+            border-bottom: none;
+        }
+
+        .task-row:hover {
+            background: var(--s2);
+        }
+
+        .task-pri {
+            width: 3px;
+            height: 22px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .task-name {
+            flex: 1;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-badge {
+            font-family: var(--mono);
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .task-due {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            min-width: 50px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .due-soon {
+            color: var(--yellow) !important;
+        }
+
+        .due-over {
+            color: var(--red) !important;
+        }
+
+        /* ── COUNTERS ── */
+        .ctr-row {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--b1);
+        }
+
+        .ctr-row:last-child {
+            border-bottom: none;
+        }
+
+        .ctr-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .ctr-name {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .ctr-right {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .ctr-days {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ctr-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ctr-track {
+            width: 100%;
+            height: 5px;
+            background: var(--s3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .ctr-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .6s;
+        }
+
+        .ctr-thresholds {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3px;
+        }
+
+        .ctr-thresh-lbl {
+            font-family: var(--mono);
+            font-size: 8px;
+            color: var(--muted);
+        }
+
+        .rst-btn {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            background: none;
+            border: 1px solid var(--b1);
+            border-radius: 3px;
+            padding: 1px 6px;
+            cursor: pointer;
+            display: none;
+            transition: all .15s;
+        }
+
+        .ctr-row:hover .rst-btn {
+            display: block;
+        }
+
+        .rst-btn:hover {
+            color: var(--purple);
+            border-color: var(--purple);
+        }
+
+        /* ── FINANCE ── */
+        .fin-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--b1);
+            font-size: 12px;
+        }
+
+        .fin-row:last-child {
+            border-bottom: none;
+        }
+
+        .fin-lbl {
+            color: var(--muted2);
+        }
+
+        .fin-val {
+            font-family: var(--mono);
+            font-weight: 500;
+        }
+
+        .savings-block {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--b1);
+        }
+
+        .savings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+
+        .savings-title {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .savings-pct {
+            font-family: var(--mono);
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--purple);
+        }
+
+        .savings-track {
+            width: 100%;
+            height: 8px;
+            background: var(--s3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .savings-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--purple);
+            transition: width .8s;
+        }
+
+        .savings-detail {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .savings-amt {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted2);
+        }
+
+        .savings-goal-lbl {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        /* ── TABLE ── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .data-table th {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--b1);
+        }
+
+        .data-table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--b1);
+            color: var(--text);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background: var(--s2);
+        }
+
+        .num-cell {
+            font-family: var(--mono);
+            text-align: right;
+        }
+
+        /* ── PILL LEGEND ── */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted2);
+        }
+
+        .legend-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        /* ── SKELETON ── */
+        .sk {
+            background: var(--s2);
+            border-radius: 3px;
+            height: 12px;
+            margin-bottom: 7px;
+            animation: fade 1.4s infinite;
+        }
+
+        @keyframes fade {
+
+            0%,
+            100% {
+                opacity: .35
+            }
+
+            50% {
+                opacity: .7
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 0: MAIN DASHBOARD               -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-main" class="screen active">
+        <div class="hdr">
+            <div style="display:flex;align-items:baseline;gap:14px">
+                <span class="hdr-title">life.os</span>
+                <span class="hdr-date" id="hdr-date"></span>
+            </div>
+            <div class="hdr-r">
+                <button class="sync-btn" onclick="syncAll()">
+                    <div class="dot"></div><span id="sync-lbl">live</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="sec">fitness</div>
+        <div class="fitness-grid">
+            <div class="card card-purple clickable" onclick="navigate('sleep')">
+                <div class="lbl" style="color:rgba(167,139,250,.5)"><span>recovery</span><span
+                        style="font-size:8px;color:rgba(167,139,250,.35)">tap for detail</span></div>
+                <div class="ring-wrap">
+                    <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(167,139,250,.15)" stroke-width="6" />
+                        <circle id="ring-c" cx="40" cy="40" r="32" fill="none" stroke="var(--purple)" stroke-width="6"
+                            stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="100"
+                            transform="rotate(-90 40 40)" style="transition:all .8s ease" />
+                    </svg>
+                    <div class="ring-inner">
+                        <div class="ring-num" id="ring-num">—</div>
+                        <div class="ring-sub">score</div>
+                    </div>
+                </div>
+                <div style="text-align:center;margin-bottom:6px">
+                    <div style="font-family:var(--mono);font-size:15px;font-weight:500" id="sleep-val">—<span
+                            style="font-size:10px;color:var(--muted2)">hrs</span></div>
+                    <div style="font-size:10px;color:var(--muted2)" id="sleep-qual">—</div>
+                </div>
+                <div class="sleep-bars" id="sleep-bars">
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:60%;background:var(--purple);opacity:.5"></div>
+                        <div class="sb-day">M</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:75%;background:var(--purple);opacity:.5"></div>
+                        <div class="sb-day">T</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:50%;background:var(--purple);opacity:.5"></div>
+                        <div class="sb-day">W</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:80%;background:var(--purple);opacity:.5"></div>
+                        <div class="sb-day">T</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:65%;background:var(--purple);opacity:.5"></div>
+                        <div class="sb-day">F</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:88%;background:var(--purple);opacity:.8"></div>
+                        <div class="sb-day">S</div>
+                    </div>
+                    <div class="sb-col">
+                        <div class="sb-bar" style="height:72%;background:var(--purple)"></div>
+                        <div class="sb-day">S</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card clickable" onclick="navigate('fitness')">
+                <div class="lbl"><span>ppl split</span><span id="ppl-next" style="color:var(--orange)">next: —</span>
+                </div>
+                <div class="ppl-row" id="ppl-grid"></div>
+                <div style="margin-top:10px;display:flex;gap:16px">
+                    <div>
+                        <div style="font-family:var(--mono);font-size:20px;font-weight:500" id="week-sess">—</div>
+                        <div style="font-size:10px;color:var(--muted2)">sessions this week</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--mono);font-size:20px;font-weight:500" id="streak-num">—</div>
+                        <div style="font-size:10px;color:var(--muted2)">day streak</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card clickable" onclick="navigate('fitness')">
+                <div class="lbl"><span>weekly volume</span><span style="color:var(--muted)">sets</span></div>
+                <div id="vol-bars">
+                    <div class="vol-row"><span class="vol-name">Chest</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:75%;background:var(--orange)"></div>
+                        </div><span class="vol-num">12 sets</span>
+                    </div>
+                    <div class="vol-row"><span class="vol-name">Back</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:87%;background:var(--blue)"></div>
+                        </div><span class="vol-num">14 sets</span>
+                    </div>
+                    <div class="vol-row"><span class="vol-name">Biceps</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:50%;background:var(--blue)"></div>
+                        </div><span class="vol-num">8 sets</span>
+                    </div>
+                    <div class="vol-row"><span class="vol-name">Shoulders</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:56%;background:var(--orange)"></div>
+                        </div><span class="vol-num">9 sets</span>
+                    </div>
+                    <div class="vol-row"><span class="vol-name">Lower back</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:37%;background:var(--purple)"></div>
+                        </div><span class="vol-num">6 sets</span>
+                    </div>
+                    <div class="vol-row"><span class="vol-name">Legs</span>
+                        <div class="vol-track">
+                            <div class="vol-fill" style="width:62%;background:var(--green)"></div>
+                        </div><span class="vol-num">10 sets</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card clickable" onclick="navigate('fitness')">
+                <div class="lbl"><span>estimated 1rm</span></div>
+                <div class="lifts-grid" id="lifts-grid">
+                    <div class="lift-card">
+                        <div class="lift-name">Bench</div>
+                        <div class="lift-val">185<span class="lift-u">lbs</span></div>
+                        <div class="lift-trend" style="color:var(--green)">+5 this month</div>
+                    </div>
+                    <div class="lift-card">
+                        <div class="lift-name">Curl</div>
+                        <div class="lift-val">65<span class="lift-u">lbs</span></div>
+                        <div class="lift-trend" style="color:var(--green)">+2.5 this month</div>
+                    </div>
+                    <div class="lift-card">
+                        <div class="lift-name">Pulldown</div>
+                        <div class="lift-val">150<span class="lift-u">lbs</span></div>
+                        <div class="lift-trend" style="color:var(--muted2)">—</div>
+                    </div>
+                    <div class="lift-card">
+                        <div class="lift-name">Back ext.</div>
+                        <div class="lift-val">115<span class="lift-u">lbs</span></div>
+                        <div class="lift-trend" style="color:var(--green)">+10 this month</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-row" style="margin-bottom:16px">
+            <div class="card clickable" style="padding:10px 14px" onclick="navigate('sleep')">
+                <div class="lbl"><span>steps</span></div>
+                <div class="big-num" id="steps-big">—</div>
+                <div class="bar-wrap">
+                    <div class="bar-fill" id="steps-bar" style="width:0%;background:var(--green)"></div>
+                </div>
+                <div class="sub" id="steps-sub">—</div>
+            </div>
+            <div class="card clickable" style="padding:10px 14px" onclick="navigate('sleep')">
+                <div class="lbl"><span>weight</span></div>
+                <div class="big-num" id="weight-big">—<span class="big-u">lbs</span></div>
+                <div class="sub" id="weight-trend" style="margin-top:5px">—</div>
+            </div>
+            <div class="card clickable" style="padding:10px 14px" onclick="navigate('sleep')">
+                <div class="lbl"><span>active cals</span></div>
+                <div class="big-num" id="cals-big">—<span class="big-u">kcal</span></div>
+                <div class="bar-wrap">
+                    <div class="bar-fill" id="cals-bar" style="width:0%;background:var(--orange)"></div>
+                </div>
+                <div class="sub">goal: 800 kcal</div>
+            </div>
+            <div class="card card-orange clickable" style="padding:10px 14px" onclick="navigate('fitness')">
+                <div class="lbl" style="color:rgba(251,146,60,.5)"><span>last workout</span></div>
+                <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--orange)" id="last-type">—
+                </div>
+                <div style="font-size:11px;color:rgba(251,146,60,.6);margin-top:3px" id="last-detail">—</div>
+                <div style="font-size:10px;color:rgba(251,146,60,.4);margin-top:2px" id="last-when">—</div>
+            </div>
+        </div>
+
+        <div class="sec">life</div>
+        <div class="life-grid">
+            <div class="card clickable" onclick="navigate('tasks')">
+                <div class="lbl"><span>tasks &amp; assignments</span><span id="task-count"
+                        style="color:var(--muted)"></span></div>
+                <div id="tasks-list">
+                    <div class="sk"></div>
+                    <div class="sk" style="width:80%"></div>
+                    <div class="sk" style="width:88%"></div>
+                </div>
+            </div>
+            <div class="card clickable" onclick="navigate('counters')">
+                <div class="lbl"><span>days since</span></div>
+                <div id="counters-list">
+                    <div class="sk"></div>
+                    <div class="sk" style="width:70%"></div>
+                </div>
+            </div>
+            <div class="card clickable" onclick="navigate('finance')">
+                <div class="lbl"><span>finance</span></div>
+                <div style="display:grid;grid-template-columns:1fr 100px;gap:10px;margin-bottom:10px">
+                    <div>
+                        <div class="fin-row"><span class="fin-lbl">this week</span><span class="fin-val"
+                                id="fin-week">—</span></div>
+                        <div class="fin-row"><span class="fin-lbl">food</span><span class="fin-val"
+                                id="fin-food">—</span></div>
+                        <div class="fin-row"><span class="fin-lbl">transport</span><span class="fin-val"
+                                id="fin-trans">—</span></div>
+                        <div class="fin-row"><span class="fin-lbl">shopping</span><span class="fin-val"
+                                id="fin-shop">—</span></div>
+                        <div class="fin-row"><span class="fin-lbl">other</span><span class="fin-val"
+                                id="fin-other">—</span></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+                        <canvas id="pie-chart" width="90" height="90"></canvas>
+                        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:3px">paycheck
+                        </div>
+                    </div>
+                </div>
+                <div class="savings-block">
+                    <div class="savings-header"><span class="savings-title">savings goal</span><span class="savings-pct"
+                            id="sav-pct">—%</span></div>
+                    <div class="savings-track">
+                        <div class="savings-fill" id="sav-bar" style="width:0%"></div>
+                    </div>
+                    <div class="savings-detail"><span class="savings-amt" id="sav-amt">—</span><span
+                            class="savings-goal-lbl" id="sav-goal">of —</span></div>
+                </div>
+                <div style="margin-top:10px">
+                    <div
+                        style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between">
+                        <span>savings growth</span><span style="color:var(--green)" id="sav-trend-mini">—</span></div>
+                    <canvas id="line-chart-mini" width="400" height="60" style="width:100%"></canvas>
+                </div>
+            </div>
+        </div>
+    </div><!-- end screen-main -->
+
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 1: FITNESS DETAIL               -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-fitness" class="screen">
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:12px">
+                <button class="back-btn" onclick="navigate('main')">← back</button>
+                <span class="detail-title">fitness</span>
+            </div>
+            <span class="hdr-date" id="fit-date"></span>
+        </div>
+
+        <div class="detail-grid-3">
+            <div class="stat-card">
+                <div class="stat-lbl">bench 1rm</div>
+                <div class="stat-num" id="d-bench">185<span class="stat-u">lbs</span></div>
+                <div class="stat-sub" id="d-bench-trend" style="color:var(--green)">+5 this month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">curl 1rm</div>
+                <div class="stat-num" id="d-curl">65<span class="stat-u">lbs</span></div>
+                <div class="stat-sub" id="d-curl-trend" style="color:var(--green)">+2.5 this month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">pulldown 1rm</div>
+                <div class="stat-num" id="d-pull">150<span class="stat-u">lbs</span></div>
+                <div class="stat-sub" id="d-pull-trend" style="color:var(--muted2)">—</div>
+            </div>
+        </div>
+        <div class="detail-grid-3" style="margin-bottom:12px">
+            <div class="stat-card">
+                <div class="stat-lbl">back ext. 1rm</div>
+                <div class="stat-num" id="d-back">115<span class="stat-u">lbs</span></div>
+                <div class="stat-sub" id="d-back-trend" style="color:var(--green)">+10 this month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">sessions this week</div>
+                <div class="stat-num" id="d-sessions">—</div>
+                <div class="stat-sub">of 6 planned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">total volume this week</div>
+                <div class="stat-num" id="d-vol-total">—<span class="stat-u">lbs</span></div>
+                <div class="stat-sub" id="d-vol-trend">—</div>
+            </div>
+        </div>
+
+        <div class="detail-grid-2">
+            <div class="chart-card">
+                <div class="chart-title"><span>volume per muscle group — last 4 weeks</span></div>
+                <div id="d-vol-bars-detail"></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><span>ppl split — this week</span><span id="d-ppl-next"
+                        style="color:var(--orange)"></span></div>
+                <div class="ppl-row" id="d-ppl-grid" style="margin-bottom:12px"></div>
+                <div
+                    style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
+                    recent sessions</div>
+                <div id="d-workout-log"></div>
+            </div>
+        </div>
+
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>weekly total volume — 8 weeks</span><span id="d-vol-trend-lbl"
+                        style="color:var(--green)"></span></div>
+                <canvas id="d-vol-chart" width="800" height="100" style="width:100%;margin-top:4px"></canvas>
+                <div style="display:flex;justify-content:space-between;margin-top:4px" id="d-vol-labels"></div>
+            </div>
+        </div>
+
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>full workout history</span></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Duration</th>
+                            <th>Volume</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="d-workout-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div><!-- end screen-fitness -->
+
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 2: FINANCE DETAIL               -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-finance" class="screen">
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:12px">
+                <button class="back-btn" onclick="navigate('main')">← back</button>
+                <span class="detail-title">finance</span>
+            </div>
+            <span class="hdr-date" id="fin-date"></span>
+        </div>
+
+        <div class="detail-grid-3">
+            <div class="stat-card">
+                <div class="stat-lbl">this week</div>
+                <div class="stat-num" id="df-week">—</div>
+                <div class="stat-sub" id="df-week-vs">vs last week</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">savings balance</div>
+                <div class="stat-num" id="df-balance" style="color:var(--purple)">—</div>
+                <div class="stat-sub" id="df-balance-pct">— of goal</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">avg weekly spend</div>
+                <div class="stat-num" id="df-avg">—</div>
+                <div class="stat-sub">last 4 weeks</div>
+            </div>
+        </div>
+
+        <div class="detail-grid-2">
+            <div class="chart-card">
+                <div class="chart-title"><span>savings growth</span><span id="df-sav-trend"
+                        style="color:var(--green)"></span></div>
+                <canvas id="df-line" width="600" height="120" style="width:100%;margin-top:6px"></canvas>
+                <div style="display:flex;justify-content:space-between;margin-top:4px" id="df-line-labels"></div>
+                <div class="savings-block" style="margin-top:12px">
+                    <div class="savings-header"><span class="savings-title">goal progress</span><span
+                            class="savings-pct" id="df-sav-pct">—%</span></div>
+                    <div class="savings-track">
+                        <div class="savings-fill" id="df-sav-bar" style="width:0%"></div>
+                    </div>
+                    <div class="savings-detail"><span class="savings-amt" id="df-sav-amt">—</span><span
+                            class="savings-goal-lbl" id="df-sav-goal">of —</span></div>
+                </div>
+            </div>
+            <div class="chart-card" style="display:flex;flex-direction:column;align-items:center">
+                <div class="chart-title" style="width:100%"><span>paycheck allocation</span></div>
+                <canvas id="df-pie" width="180" height="180" style="margin:8px auto"></canvas>
+                <div class="legend" id="df-legend" style="justify-content:center"></div>
+            </div>
+        </div>
+
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>weekly spending by category</span></div>
+                <canvas id="df-stacked" width="800" height="120" style="width:100%;margin-top:6px"></canvas>
+                <div style="display:flex;justify-content:space-between;margin-top:4px" id="df-stacked-labels"></div>
+                <div class="legend" style="margin-top:8px">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--yellow)"></div>Food
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--blue)"></div>Transport
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--purple)"></div>Shopping
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--orange)"></div>Other
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>weekly history</span></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th class="num-cell">Total</th>
+                            <th class="num-cell">Food</th>
+                            <th class="num-cell">Transport</th>
+                            <th class="num-cell">Shopping</th>
+                            <th class="num-cell">Other</th>
+                            <th class="num-cell">Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody id="df-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div><!-- end screen-finance -->
+
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 3: SLEEP DETAIL                 -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-sleep" class="screen">
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:12px">
+                <button class="back-btn" onclick="navigate('main')">← back</button>
+                <span class="detail-title">health &amp; recovery</span>
+            </div>
+        </div>
+        <div class="detail-grid-3">
+            <div class="stat-card">
+                <div class="stat-lbl">last sleep</div>
+                <div class="stat-num" id="ds-hrs">—<span class="stat-u">hrs</span></div>
+                <div class="stat-sub" id="ds-qual">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">avg sleep (7d)</div>
+                <div class="stat-num" id="ds-avg">—<span class="stat-u">hrs</span></div>
+                <div class="stat-sub">goal: 7.5hrs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">today's steps</div>
+                <div class="stat-num" id="ds-steps">—</div>
+                <div class="stat-sub" id="ds-steps-sub">—</div>
+            </div>
+        </div>
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>sleep duration — 30 days</span></div>
+                <canvas id="ds-chart" width="800" height="100" style="width:100%;margin-top:6px"></canvas>
+                <div style="display:flex;justify-content:space-between;margin-top:4px" id="ds-labels"></div>
+            </div>
+        </div>
+        <div class="detail-grid-2">
+            <div class="chart-card">
+                <div class="chart-title"><span>weight trend</span></div>
+                <canvas id="ds-weight" width="400" height="100" style="width:100%;margin-top:6px"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><span>active calories — 7 days</span></div>
+                <canvas id="ds-cals" width="400" height="100" style="width:100%;margin-top:6px"></canvas>
+            </div>
+        </div>
+    </div><!-- end screen-sleep -->
+
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 4: TASKS DETAIL                 -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-tasks" class="screen">
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:12px">
+                <button class="back-btn" onclick="navigate('main')">← back</button>
+                <span class="detail-title">tasks &amp; assignments</span>
+            </div>
+        </div>
+        <div class="detail-grid-3">
+            <div class="stat-card">
+                <div class="stat-lbl">active</div>
+                <div class="stat-num" id="dt-active" style="color:var(--blue)">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">due this week</div>
+                <div class="stat-num" id="dt-week" style="color:var(--yellow)">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">overdue</div>
+                <div class="stat-num" id="dt-over" style="color:var(--red)">—</div>
+            </div>
+        </div>
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>all active tasks</span></div>
+                <div id="dt-list"></div>
+            </div>
+        </div>
+    </div><!-- end screen-tasks -->
+
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SCREEN 5: COUNTERS DETAIL              -->
+    <!-- ═══════════════════════════════════════ -->
+    <div id="screen-counters" class="screen">
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:12px">
+                <button class="back-btn" onclick="navigate('main')">← back</button>
+                <span class="detail-title">days since</span>
+            </div>
+        </div>
+        <div class="detail-full">
+            <div class="chart-card">
+                <div class="chart-title"><span>all counters</span></div>
+                <div id="dc-list"></div>
+                <div
+                    style="display:grid;grid-template-columns:1fr 80px 70px auto;gap:6px;margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)">
+                    <input id="dc-name" placeholder="new item..."
+                        style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 9px;outline:none;">
+                    <input id="dc-yellow" placeholder="yellow"
+                        style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 9px;outline:none;">
+                    <input id="dc-red" placeholder="red"
+                        style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 9px;outline:none;">
+                    <button onclick="addCounter()"
+                        style="background:var(--pbg);border:1px solid rgba(167,139,250,.2);border-radius:6px;color:var(--purple);font-family:var(--mono);font-size:11px;padding:5px 12px;cursor:pointer;">add</button>
+                </div>
+            </div>
+        </div>
+    </div><!-- end screen-counters -->
+
+
+    <script>
+        const SHEET_ID = 'PASTE_YOUR_SPREADSHEET_ID_HERE';
+        const SCRIPT_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+        const BASE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=`;
+
+        const PPL_SEQ = ['Push', 'Pull', 'Legs', 'Rest', 'Push', 'Pull', 'Legs'];
+        const PPL_CLR = { Push: 'var(--orange)', Pull: 'var(--blue)', Legs: 'var(--green)', Rest: 'var(--muted)' };
+        const MUSC_MAP = { Push: ['Chest', 'Shoulders', 'Triceps'], Pull: ['Back', 'Biceps', 'Lower back'], Legs: ['Quads', 'Hamstrings', 'Glutes', 'Calves'] };
+        const MUSC_CLR = { Chest: 'var(--orange)', Back: 'var(--blue)', Biceps: 'var(--blue)', Shoulders: 'var(--orange)', 'Lower back': 'var(--purple)', Legs: 'var(--green)', Quads: 'var(--green)', Hamstrings: 'var(--green)', Glutes: 'var(--green)', Calves: 'var(--green)', Triceps: 'var(--orange)' };
+        const PRI_CLR = { High: 'var(--red)', Medium: 'var(--yellow)', Low: 'var(--blue)' };
+        const TYPE_CLR = { Assignment: 'color:var(--blue);background:var(--bbg)', Project: 'color:var(--purple);background:var(--pbg)', Todo: 'color:var(--muted2);background:var(--s3)', Habit: 'color:var(--green);background:var(--gbg)' };
+
+        let cachedHealth = null, cachedWorkouts = null, cachedTasks = null, cachedCounters = null, cachedFinance = null;
+
+        document.getElementById('hdr-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+        /* ── ROUTER ── */
+        function navigate(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const el = document.getElementById('screen-' + (screen === 'main' ? 'main' : screen));
+            if (!el) return;
+            el.classList.add('active');
+            if (screen === 'fitness') buildFitnessDetail();
+            if (screen === 'finance') buildFinanceDetail();
+            if (screen === 'sleep') buildSleepDetail();
+            if (screen === 'tasks') buildTasksDetail();
+            if (screen === 'counters') buildCountersDetail();
+            window.scrollTo(0, 0);
+        }
+
+        /* ── FETCH ── */
+        async function fetchSheet(name) {
+            if (SHEET_ID === 'PASTE_YOUR_SPREADSHEET_ID_HERE') return null;
+            try {
+                const r = await fetch(BASE + encodeURIComponent(name));
+                const t = await r.text();
+                const j = JSON.parse(t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+                const cols = j.table.cols.map(c => c.label);
+                return (j.table.rows || []).map(row => Object.fromEntries(cols.map((c, i) => [c, row.c[i]?.v ?? null])));
+            } catch { return null; }
+        }
+
+        /* ── HELPERS ── */
+        function daysUntil(v) { if (!v) return null; const d = new Date(v), n = new Date(); n.setHours(0, 0, 0, 0); d.setHours(0, 0, 0, 0); return Math.round((d - n) / 86400000); }
+        function fmtDue(d) { if (d === null) return ''; if (d < 0) return `${Math.abs(d)}d over`; if (d === 0) return 'today'; if (d === 1) return 'tmrw'; return `${d}d`; }
+        function fmtDate(v) { try { const d = new Date(v); return (d.getMonth() + 1) + '/' + (d.getDate()); } catch { return ''; } }
+        function fmtMoney(v) { return v != null ? `$${parseFloat(v).toFixed(2)}` : '—'; }
+
+        /* ── CANVAS HELPERS ── */
+        function drawLineCanvas(canvasId, points, labelEl, color = '#22c55e', showFill = true) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !points.length) return;
+            const W = canvas.offsetWidth || 400, H = canvas.height || 100;
+            canvas.width = W * window.devicePixelRatio;
+            canvas.height = H * window.devicePixelRatio;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.clearRect(0, 0, W, H);
+            const min = Math.min(...points) * 0.97, max = Math.max(...points) * 1.03, range = max - min || 1;
+            const pad = { l: 4, r: 4, t: 10, b: 4 }, pW = W - pad.l - pad.r, pH = H - pad.t - pad.b;
+            const px = i => pad.l + (i / (points.length - 1)) * pW;
+            const py = v => pad.t + pH - ((v - min) / range) * pH;
+            if (showFill) {
+                const g = ctx.createLinearGradient(0, pad.t, 0, H);
+                g.addColorStop(0, color + '33'); g.addColorStop(1, color + '00');
+                ctx.beginPath();
+                points.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)));
+                ctx.lineTo(px(points.length - 1), H); ctx.lineTo(px(0), H); ctx.closePath();
+                ctx.fillStyle = g; ctx.fill();
+            }
+            ctx.beginPath();
+            points.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)));
+            ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+            points.forEach((v, i) => { ctx.beginPath(); ctx.arc(px(i), py(v), 2.5, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = '#0c0c0e'; ctx.lineWidth = 1; ctx.stroke(); });
+            return { px, py, pad };
+        }
+
+        function drawBarCanvas(canvasId, weeks, categories) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const W = canvas.offsetWidth || 600, H = 120;
+            canvas.width = W * window.devicePixelRatio; canvas.height = H * window.devicePixelRatio;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.clearRect(0, 0, W, H);
+            const totals = weeks.map(w => categories.reduce((s, c) => s + (parseFloat(w[c.key]) || 0), 0));
+            const maxT = Math.max(...totals, 1);
+            const bw = (W - 20) / weeks.length - 4, pad = { l: 4, r: 4, t: 4, b: 4 }, pH = H - pad.t - pad.b;
+            weeks.forEach((w, i) => {
+                const x = pad.l + i * (bw + 4);
+                let y = H - pad.b;
+                categories.forEach(c => {
+                    const v = parseFloat(w[c.key]) || 0;
+                    const bh = (v / maxT) * pH;
+                    ctx.fillStyle = c.color;
+                    ctx.beginPath();
+                    ctx.rect(x, y - bh, bw, bh);
+                    ctx.fill();
+                    y -= bh;
+                });
+            });
+        }
+
+        function drawPieCanvas(canvasId, data) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 4;
+            ctx.clearRect(0, 0, W, H);
+            const total = data.reduce((s, d) => s + d.val, 0);
+            let angle = -Math.PI / 2;
+            data.forEach(d => {
+                const slice = (d.val / total) * Math.PI * 2;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, angle, angle + slice); ctx.closePath();
+                ctx.fillStyle = d.color; ctx.fill();
+                ctx.strokeStyle = '#0c0c0e'; ctx.lineWidth = 1.5; ctx.stroke();
+                angle += slice;
+            });
+            ctx.beginPath(); ctx.arc(cx, cy, r * .52, 0, Math.PI * 2); ctx.fillStyle = document.getElementById('screen-main').style.background || '#141416'; ctx.fill();
+            ctx.beginPath(); ctx.arc(cx, cy, r * .52, 0, Math.PI * 2); ctx.fillStyle = '#141416'; ctx.fill();
+        }
+
+        /* ── DEMO DATA ── */
+        const DEMO_HEALTH = [
+            { steps: 7200, sleep_hrs: 6.8, sleep_quality: 'Fair', weight_lbs: 173.0, active_calories: 380, date: '2026-03-13' },
+            { steps: 9100, sleep_hrs: 7.5, sleep_quality: 'Good', weight_lbs: 172.8, active_calories: 520, date: '2026-03-14' },
+            { steps: 6400, sleep_hrs: 6.2, sleep_quality: 'Poor', weight_lbs: 172.9, active_calories: 290, date: '2026-03-15' },
+            { steps: 10200, sleep_hrs: 8.1, sleep_quality: 'Good', weight_lbs: 172.5, active_calories: 680, date: '2026-03-16' },
+            { steps: 8420, sleep_hrs: 7.2, sleep_quality: 'Good', weight_lbs: 172.1, active_calories: 480, date: '2026-03-17' },
+            { steps: 5100, sleep_hrs: 6.5, sleep_quality: 'Fair', weight_lbs: 172.3, active_calories: 310, date: '2026-03-18' },
+            { steps: 9850, sleep_hrs: 7.8, sleep_quality: 'Good', weight_lbs: 171.9, active_calories: 620, date: '2026-03-19' },
+        ];
+        const DEMO_WORKOUTS = [
+            { workout_type: 'Push', duration_min: 62, volume_lbs: 14200, date: '2026-02-24', notes: 'Bench 185x5' },
+            { workout_type: 'Pull', duration_min: 55, volume_lbs: 12800, date: '2026-02-25', notes: 'Pulldown 140x8' },
+            { workout_type: 'Legs', duration_min: 70, volume_lbs: 18400, date: '2026-02-26', notes: '' },
+            { workout_type: 'Push', duration_min: 58, volume_lbs: 13800, date: '2026-03-03', notes: '' },
+            { workout_type: 'Pull', duration_min: 52, volume_lbs: 12200, date: '2026-03-04', notes: 'Curl 60x10' },
+            { workout_type: 'Legs', duration_min: 65, volume_lbs: 17900, date: '2026-03-05', notes: '' },
+            { workout_type: 'Push', duration_min: 60, volume_lbs: 14500, date: '2026-03-10', notes: '' },
+            { workout_type: 'Pull', duration_min: 56, volume_lbs: 13100, date: '2026-03-11', notes: '' },
+            { workout_type: 'Legs', duration_min: 72, volume_lbs: 19000, date: '2026-03-12', notes: '' },
+            { workout_type: 'Push', duration_min: 62, volume_lbs: 14700, date: '2026-03-17', notes: 'Bench 190x3' },
+            { workout_type: 'Pull', duration_min: 58, volume_lbs: 13400, date: '2026-03-18', notes: '' },
+            { workout_type: 'Legs', duration_min: 70, volume_lbs: 18800, date: '2026-03-19', notes: '' },
+        ];
+        const DEMO_FINANCE = [
+            { week_start: '2026-02-03', total_spent: 92.10, food: 38, transport: 14, shopping: 26, other: 14.10, savings_balance: 1100, savings_goal: 2000 },
+            { week_start: '2026-02-10', total_spent: 78.40, food: 29, transport: 10, shopping: 22, other: 17.40, savings_balance: 1160, savings_goal: 2000 },
+            { week_start: '2026-02-17', total_spent: 110.20, food: 44, transport: 18, shopping: 30, other: 18.20, savings_balance: 1190, savings_goal: 2000 },
+            { week_start: '2026-02-24', total_spent: 65.50, food: 24, transport: 9, shopping: 18, other: 14.50, savings_balance: 1240, savings_goal: 2000 },
+            { week_start: '2026-03-03', total_spent: 87.42, food: 32.10, transport: 12, shopping: 28, other: 15.32, savings_balance: 1290, savings_goal: 2000 },
+            { week_start: '2026-03-10', total_spent: 64.18, food: 28.50, transport: 8, shopping: 14.50, other: 13.18, savings_balance: 1330, savings_goal: 2000 },
+            { week_start: '2026-03-17', total_spent: 41.00, food: 22, transport: 6, shopping: 0, other: 13, savings_balance: 1370, savings_goal: 2000 },
+        ];
+        const DEMO_TASKS = [
+            { title: 'Calc II problem set 9', type: 'Assignment', due_date: new Date(Date.now() + 3 * 86400000), priority: 'High', status: 'In progress' },
+            { title: 'Latin chapter 21 exercises', type: 'Assignment', due_date: new Date(Date.now() + 5 * 86400000), priority: 'High', status: 'Not started' },
+            { title: 'PHIG presentation slides', type: 'Project', due_date: new Date(Date.now() + 9 * 86400000), priority: 'High', status: 'Not started' },
+            { title: 'Kingland internship prep', type: 'Project', due_date: new Date(Date.now() + 72 * 86400000), priority: 'Medium', status: 'In progress' },
+            { title: 'Email professor re: office hours', type: 'Todo', due_date: new Date(Date.now() + 86400000), priority: 'Medium', status: 'Not started' },
+            { title: 'Big Data assignment 3', type: 'Assignment', due_date: new Date(Date.now() - 86400000), priority: 'High', status: 'Not started' },
+        ];
+        const DEMO_COUNTERS = [
+            { item: 'Laundry', last_reset: new Date(Date.now() - 6 * 86400000), yellow_after_days: 6, red_after_days: 8 },
+            { item: 'Haircut', last_reset: new Date(Date.now() - 22 * 86400000), yellow_after_days: 21, red_after_days: 28 },
+            { item: 'Clean room', last_reset: new Date(Date.now() - 4 * 86400000), yellow_after_days: 5, red_after_days: 7 },
+            { item: 'Call parents', last_reset: new Date(Date.now() - 9 * 86400000), yellow_after_days: 5, red_after_days: 7 },
+        ];
+
+        /* ── MAIN DASHBOARD LOADERS ── */
+        function setRing(score) {
+            const pct = Math.min(100, Math.max(0, score)), c = 201;
+            document.getElementById('ring-c').setAttribute('stroke-dashoffset', (c - c * pct / 100).toFixed(1));
+            document.getElementById('ring-c').setAttribute('stroke', pct >= 70 ? 'var(--green)' : pct >= 45 ? 'var(--yellow)' : 'var(--red)');
+            document.getElementById('ring-num').textContent = Math.round(pct);
+        }
+
+        async function loadHealth() {
+            const rows = await fetchSheet('health_daily');
+            cachedHealth = rows && rows.length ? rows : DEMO_HEALTH;
+            const l = cachedHealth[cachedHealth.length - 1];
+            const steps = parseInt(l.steps) || 0;
+            document.getElementById('steps-big').textContent = steps.toLocaleString();
+            const sp = Math.min(100, Math.round(steps / 10000 * 100));
+            document.getElementById('steps-bar').style.width = sp + '%';
+            document.getElementById('steps-sub').textContent = sp + '% of 10,000';
+            const hrs = parseFloat(l.sleep_hrs) || 0;
+            document.getElementById('sleep-val').innerHTML = `${hrs.toFixed(1)}<span style="font-size:10px;color:var(--muted2)">hrs</span>`;
+            document.getElementById('sleep-qual').textContent = l.sleep_quality || '—';
+            setRing(Math.min(100, Math.round((hrs / 8) * 80 + 20)));
+            if (l.weight_lbs) {
+                document.getElementById('weight-big').innerHTML = `${parseFloat(l.weight_lbs).toFixed(1)}<span class="big-u">lbs</span>`;
+                if (cachedHealth.length >= 2) { const diff = parseFloat(l.weight_lbs) - parseFloat(cachedHealth[cachedHealth.length - 2].weight_lbs || 0); const el = document.getElementById('weight-trend'); el.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1) + ' this week'; el.style.color = diff < 0 ? 'var(--green)' : diff > 0 ? 'var(--yellow)' : 'var(--muted2)'; }
+            }
+            const cals = parseInt(l.active_calories) || 0;
+            document.getElementById('cals-big').innerHTML = `${cals.toLocaleString()}<span class="big-u">kcal</span>`;
+            document.getElementById('cals-bar').style.width = Math.min(100, Math.round(cals / 800 * 100)) + '%';
+            if (cachedHealth.length >= 2) {
+                const last7 = cachedHealth.slice(-7), mx = Math.max(...last7.map(r => parseFloat(r.sleep_hrs) || 0), .1);
+                const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                document.getElementById('sleep-bars').innerHTML = last7.map((r, i) => { const h = parseFloat(r.sleep_hrs) || 0; const pct = Math.round(h / mx * 100); const clr = h >= 7.5 ? 'var(--green)' : h >= 6 ? 'var(--blue)' : 'var(--red)'; return `<div class="sb-col"><div class="sb-bar" style="height:${pct}%;background:${clr};opacity:.75"></div><div class="sb-day">${days[i % 7]}</div></div>`; }).join('');
+            }
+        }
+
+        async function loadWorkouts() {
+            const rows = await fetchSheet('workouts');
+            cachedWorkouts = rows && rows.length ? rows : DEMO_WORKOUTS;
+            const src = cachedWorkouts;
+            const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
+            const last = src[src.length - 1];
+            const lastIdx = PPL_SEQ.indexOf(last.workout_type || '');
+            const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
+            const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            document.getElementById('ppl-grid').innerHTML = days7.map((d, i) => { const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length]; const isT = i === todayIdx; return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`; }).join('');
+            document.getElementById('ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
+            const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
+            document.getElementById('week-sess').textContent = src.filter(r => new Date(r.date) >= ws).length;
+            document.getElementById('streak-num').textContent = Math.min(src.length, 12);
+            document.getElementById('last-type').textContent = last.workout_type || '—';
+            document.getElementById('last-detail').textContent = `${last.duration_min || '—'} min · ${last.volume_lbs ? parseInt(last.volume_lbs).toLocaleString() + ' lbs' : '—'}`;
+            const diffD = Math.floor((Date.now() - new Date(last.date)) / 86400000);
+            document.getElementById('last-when').textContent = diffD === 0 ? 'today' : diffD === 1 ? 'yesterday' : `${diffD}d ago`;
+            const volMap = {}; src.slice(-14).forEach(r => { (MUSC_MAP[r.workout_type] || []).forEach(m => { volMap[m] = (volMap[m] || 0) + Math.round((r.volume_lbs || 0) / 1500); }); });
+            const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
+            const mx = Math.max(...mOrder.map(m => volMap[m] || 0), 1);
+            document.getElementById('vol-bars').innerHTML = mOrder.map(m => { const v = volMap[m] || 0; return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m] || 'var(--muted2)'}"></div></div><span class="vol-num">${v} sets</span></div>`; }).join('');
+        }
+
+        async function loadTasks() {
+            const rows = await fetchSheet('tasks');
+            cachedTasks = rows ? rows.filter(r => r.status !== 'Done') : DEMO_TASKS;
+            const src = cachedTasks.sort((a, b) => (a.due_date ? new Date(a.due_date) : new Date('9999')) - (b.due_date ? new Date(b.due_date) : new Date('9999'))).slice(0, 6);
+            document.getElementById('task-count').textContent = cachedTasks.length + ' active';
+            document.getElementById('tasks-list').innerHTML = src.map(r => { const d = daysUntil(r.due_date); const dc = d !== null && d < 0 ? 'due-over' : d !== null && d <= 2 ? 'due-soon' : ''; const tc = TYPE_CLR[r.type] || 'color:var(--muted2);background:var(--s3)'; return `<div class="task-row"><div class="task-pri" style="background:${PRI_CLR[r.priority] || 'var(--muted)'}"></div><div class="task-name">${r.title || r.Name}</div><span class="task-badge" style="${tc}">${r.type || ''}</span><div class="task-due ${dc}">${fmtDue(d)}</div></div>`; }).join('');
+        }
+
+        async function loadCounters() {
+            const rows = await fetchSheet('counters');
+            cachedCounters = rows && rows.length ? rows : DEMO_COUNTERS;
+            const renderCounters = (el, src, limit = 99) => src.slice(0, limit).map(r => {
+                const since = r.last_reset ? Math.floor((Date.now() - new Date(r.last_reset)) / 86400000) : 0;
+                const y = parseInt(r.yellow_after_days) || 6, rd = parseInt(r.red_after_days) || 8;
+                const max = rd + Math.round(rd * .25), pct = Math.min(100, Math.round(since / max * 100));
+                const color = since >= rd ? 'var(--red)' : since >= y ? 'var(--yellow)' : 'var(--green)';
+                const yM = Math.round(y / max * 100), rM = Math.round(rd / max * 100);
+                return `<div class="ctr-row"><div class="ctr-top"><span class="ctr-name">${r.item}</span><div class="ctr-right"><span class="ctr-days" style="color:${color}">${since}d</span><div class="ctr-dot" style="background:${color}"></div><button class="rst-btn" onclick="resetCounter('${r.item}',this)">reset</button></div></div><div style="position:relative"><div class="ctr-track"><div class="ctr-fill" style="width:${pct}%;background:${color}"></div></div><div style="position:absolute;top:0;left:${yM}%;width:1px;height:5px;background:var(--yellow);opacity:.5;transform:translateX(-50%)"></div><div style="position:absolute;top:0;left:${rM}%;width:1px;height:5px;background:var(--red);opacity:.5;transform:translateX(-50%)"></div></div><div class="ctr-thresholds"><span class="ctr-thresh-lbl">0d</span><span class="ctr-thresh-lbl" style="color:var(--yellow)">⚠ ${y}d</span><span class="ctr-thresh-lbl" style="color:var(--red)">● ${rd}d</span></div></div>`;
+            }).join('');
+            document.getElementById('counters-list').innerHTML = renderCounters(null, cachedCounters, 4);
+            window._renderCounters = renderCounters;
+        }
+
+        async function loadFinance() {
+            const rows = await fetchSheet('finance');
+            cachedFinance = rows && rows.length ? rows : DEMO_FINANCE;
+            const l = cachedFinance[cachedFinance.length - 1];
+            document.getElementById('fin-week').textContent = fmtMoney(l.total_spent);
+            document.getElementById('fin-food').textContent = fmtMoney(l.food);
+            document.getElementById('fin-trans').textContent = fmtMoney(l.transport);
+            document.getElementById('fin-shop').textContent = fmtMoney(l.shopping);
+            document.getElementById('fin-other').textContent = fmtMoney(l.other);
+            if (l.savings_balance && l.savings_goal) {
+                const pct = Math.min(100, Math.round(l.savings_balance / l.savings_goal * 100));
+                document.getElementById('sav-pct').textContent = pct + '%';
+                document.getElementById('sav-bar').style.width = pct + '%';
+                document.getElementById('sav-amt').textContent = `$${parseFloat(l.savings_balance).toLocaleString()}`;
+                document.getElementById('sav-goal').textContent = `of $${parseFloat(l.savings_goal).toLocaleString()}`;
+            }
+            const pieData = [
+                { label: 'Food', val: parseFloat(l.food) || 0, color: '#f59e0b' },
+                { label: 'Transport', val: parseFloat(l.transport) || 0, color: '#60a5fa' },
+                { label: 'Shopping', val: parseFloat(l.shopping) || 0, color: '#a78bfa' },
+                { label: 'Other', val: parseFloat(l.other) || 0, color: '#fb923c' },
+                { label: 'Savings', val: 50, color: '#22c55e' },
+            ].filter(d => d.val > 0);
+            setTimeout(() => { drawPieCanvas('pie-chart', pieData); }, 50);
+            const savPts = cachedFinance.map(r => parseFloat(r.savings_balance) || 0);
+            if (savPts.length >= 2) { const diff = savPts[savPts.length - 1] - savPts[0]; document.getElementById('sav-trend-mini').textContent = (diff >= 0 ? '+' : '') + `$${diff.toFixed(0)} total`; }
+            setTimeout(() => { drawLineCanvas('line-chart-mini', savPts, null, '#22c55e', true); }, 60);
+        }
+
+        /* ── DETAIL PAGE BUILDERS ── */
+        function buildFitnessDetail() {
+            const src = cachedWorkouts || DEMO_WORKOUTS;
+            document.getElementById('fit-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const now = new Date(), ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
+            const thisWeek = src.filter(r => new Date(r.date) >= ws);
+            document.getElementById('d-sessions').textContent = thisWeek.length;
+            const totalVol = thisWeek.reduce((s, r) => s + (parseInt(r.volume_lbs) || 0), 0);
+            document.getElementById('d-vol-total').innerHTML = `${totalVol.toLocaleString()}<span class="stat-u">lbs</span>`;
+            const dow = new Date().getDay(), todayIdx = dow === 0 ? 6 : dow - 1;
+            const last = src[src.length - 1];
+            const lastIdx = PPL_SEQ.indexOf(last.workout_type || '');
+            const seqPos = lastIdx >= 0 ? (lastIdx + 1) % PPL_SEQ.length : 0;
+            const days7 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            document.getElementById('d-ppl-grid').innerHTML = days7.map((d, i) => { const type = PPL_SEQ[(seqPos + i) % PPL_SEQ.length]; const isT = i === todayIdx; return `<div class="ppl-cell${isT ? ' today' : ''}"><div class="ppl-d">${d}</div><div class="ppl-t" style="color:${PPL_CLR[type] || 'var(--muted)'}">${type.substring(0, 3)}</div></div>`; }).join('');
+            document.getElementById('d-ppl-next').textContent = `next: ${PPL_SEQ[(seqPos + todayIdx + 1) % PPL_SEQ.length]}`;
+            document.getElementById('d-workout-log').innerHTML = src.slice(-5).reverse().map(r => { const dt = new Date(r.date); const ds = `${dt.getMonth() + 1}/${dt.getDate()}`; return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px"><span style="color:${PPL_CLR[r.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${r.workout_type}</span><span>${r.duration_min || '—'}min</span><span style="color:var(--muted);font-family:var(--mono);font-size:10px">${ds}</span></div>`; }).join('');
+            const volMap = {};
+            src.slice(-28).forEach(r => { (MUSC_MAP[r.workout_type] || []).forEach(m => { volMap[m] = (volMap[m] || 0) + Math.round((r.volume_lbs || 0) / 1500); }); });
+            const mOrder = ['Chest', 'Back', 'Biceps', 'Shoulders', 'Lower back', 'Legs'];
+            const mx = Math.max(...mOrder.map(m => volMap[m] || 0), 1);
+            document.getElementById('d-vol-bars-detail').innerHTML = mOrder.map(m => { const v = volMap[m] || 0; return `<div class="vol-row"><span class="vol-name">${m}</span><div class="vol-track" style="height:7px"><div class="vol-fill" style="width:${Math.round(v / mx * 100)}%;background:${MUSC_CLR[m]}"></div></div><span class="vol-num">${v} sets</span></div>`; }).join('');
+            const byWeek = {}; src.forEach(r => { const d = new Date(r.date), wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); const key = wk.toISOString().substring(0, 10); byWeek[key] = (byWeek[key] || 0) + (parseInt(r.volume_lbs) || 0); });
+            const wkKeys = Object.keys(byWeek).sort().slice(-8);
+            const wkVols = wkKeys.map(k => byWeek[k]);
+            if (wkVols.length >= 2) { const diff = wkVols[wkVols.length - 1] - wkVols[0]; document.getElementById('d-vol-trend-lbl').textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' lbs trend'; }
+            setTimeout(() => {
+                drawLineCanvas('d-vol-chart', wkVols, null, '#a78bfa', true);
+                const lblEl = document.getElementById('d-vol-labels');
+                if (lblEl) lblEl.innerHTML = wkKeys.map(k => `<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${k.substring(5)}</span>`).join('');
+            }, 100);
+            document.getElementById('d-workout-table').innerHTML = src.slice().reverse().map(r => { const dt = new Date(r.date); return `<tr><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${dt.getMonth() + 1}/${dt.getDate()}</td><td><span style="color:${PPL_CLR[r.workout_type] || 'var(--muted)'};font-family:var(--mono);font-size:10px">${r.workout_type || '—'}</span></td><td class="num-cell" style="color:var(--muted2)">${r.duration_min || '—'}min</td><td class="num-cell">${r.volume_lbs ? parseInt(r.volume_lbs).toLocaleString() : '—'} lbs</td><td style="color:var(--muted2);font-size:11px">${r.notes || ''}</td></tr>`; }).join('');
+        }
+
+        function buildFinanceDetail() {
+            const src = cachedFinance || DEMO_FINANCE;
+            document.getElementById('fin-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const l = src[src.length - 1], prev = src[src.length - 2] || l;
+            document.getElementById('df-week').innerHTML = `<span style="font-size:22px">${fmtMoney(l.total_spent)}</span>`;
+            const diff = parseFloat(l.total_spent || 0) - parseFloat(prev.total_spent || 0);
+            document.getElementById('df-week-vs').textContent = (diff >= 0 ? '+' : '') + fmtMoney(Math.abs(diff)) + ' vs last week';
+            document.getElementById('df-week-vs').style.color = diff > 0 ? 'var(--red)' : diff < 0 ? 'var(--green)' : 'var(--muted2)';
+            document.getElementById('df-balance').textContent = `$${parseFloat(l.savings_balance || 0).toLocaleString()}`;
+            const goalPct = Math.round((l.savings_balance || 0) / (l.savings_goal || 1) * 100);
+            document.getElementById('df-balance-pct').textContent = goalPct + '% of $' + parseFloat(l.savings_goal || 0).toLocaleString();
+            const last4 = src.slice(-4), avg = last4.reduce((s, r) => s + (parseFloat(r.total_spent) || 0), 0) / last4.length;
+            document.getElementById('df-avg').innerHTML = `<span style="font-size:22px">${fmtMoney(avg)}</span>`;
+            const savPts = src.map(r => parseFloat(r.savings_balance) || 0);
+            const savDiff = savPts[savPts.length - 1] - savPts[0];
+            document.getElementById('df-sav-trend').textContent = (savDiff >= 0 ? '+' : '') + `$${savDiff.toFixed(0)} total`;
+            const pct = Math.min(100, Math.round((l.savings_balance || 0) / (l.savings_goal || 1) * 100));
+            document.getElementById('df-sav-pct').textContent = pct + '%';
+            document.getElementById('df-sav-bar').style.width = pct + '%';
+            document.getElementById('df-sav-amt').textContent = `$${parseFloat(l.savings_balance || 0).toLocaleString()}`;
+            document.getElementById('df-sav-goal').textContent = `of $${parseFloat(l.savings_goal || 0).toLocaleString()}`;
+            const labels = src.map(r => fmtDate(r.week_start));
+            document.getElementById('df-line-labels').innerHTML = labels.map(lb => `<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${lb}</span>`).join('');
+            const pieData = [
+                { label: 'Food', val: parseFloat(l.food) || 0, color: '#f59e0b' },
+                { label: 'Transport', val: parseFloat(l.transport) || 0, color: '#60a5fa' },
+                { label: 'Shopping', val: parseFloat(l.shopping) || 0, color: '#a78bfa' },
+                { label: 'Other', val: parseFloat(l.other) || 0, color: '#fb923c' },
+                { label: 'Savings', val: Math.max(0, savDiff / src.length), color: '#22c55e' },
+            ].filter(d => d.val > 0);
+            document.getElementById('df-legend').innerHTML = pieData.map(d => `<div class="legend-item"><div class="legend-dot" style="background:${d.color}"></div>${d.label}</div>`).join('');
+            document.getElementById('df-stacked-labels').innerHTML = labels.map(lb => `<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${lb}</span>`).join('');
+            const cats = [{ key: 'food', color: '#f59e0b' }, { key: 'transport', color: '#60a5fa' }, { key: 'shopping', color: '#a78bfa' }, { key: 'other', color: '#fb923c' }];
+            document.getElementById('df-table').innerHTML = src.slice().reverse().map(r => `<tr><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${fmtDate(r.week_start)}</td><td class="num-cell" style="font-weight:500">${fmtMoney(r.total_spent)}</td><td class="num-cell" style="color:var(--yellow)">${fmtMoney(r.food)}</td><td class="num-cell" style="color:var(--blue)">${fmtMoney(r.transport)}</td><td class="num-cell" style="color:var(--purple)">${fmtMoney(r.shopping)}</td><td class="num-cell" style="color:var(--orange)">${fmtMoney(r.other)}</td><td class="num-cell" style="color:var(--green)">$${parseFloat(r.savings_balance || 0).toLocaleString()}</td></tr>`).join('');
+            setTimeout(() => {
+                drawLineCanvas('df-line', savPts, null, '#a78bfa', true);
+                drawPieCanvas('df-pie', pieData);
+                drawBarCanvas('df-stacked', src, cats);
+            }, 100);
+        }
+
+        function buildSleepDetail() {
+            const src = cachedHealth || DEMO_HEALTH;
+            const l = src[src.length - 1];
+            document.getElementById('ds-hrs').innerHTML = `${parseFloat(l.sleep_hrs || 0).toFixed(1)}<span class="stat-u">hrs</span>`;
+            document.getElementById('ds-qual').textContent = l.sleep_quality || '—';
+            const avg7 = src.slice(-7).reduce((s, r) => s + (parseFloat(r.sleep_hrs) || 0), 0) / Math.min(src.length, 7);
+            document.getElementById('ds-avg').innerHTML = `${avg7.toFixed(1)}<span class="stat-u">hrs</span>`;
+            const steps = parseInt(l.steps) || 0;
+            document.getElementById('ds-steps').textContent = steps.toLocaleString();
+            document.getElementById('ds-steps-sub').textContent = Math.round(steps / 10000 * 100) + '% of 10,000';
+            const labels = src.map(r => fmtDate(r.date));
+            document.getElementById('ds-labels').innerHTML = labels.map((lb, i) => i % Math.ceil(labels.length / 7) === 0 ? `<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${lb}</span>` : '').join('');
+            setTimeout(() => {
+                drawLineCanvas('ds-chart', src.map(r => parseFloat(r.sleep_hrs) || 0), null, '#a78bfa', true);
+                drawLineCanvas('ds-weight', src.map(r => parseFloat(r.weight_lbs) || 0), null, '#60a5fa', false);
+                drawLineCanvas('ds-cals', src.map(r => parseInt(r.active_calories) || 0), null, '#fb923c', true);
+            }, 100);
+        }
+
+        function buildTasksDetail() {
+            const src = cachedTasks || DEMO_TASKS;
+            const active = src.filter(r => r.status !== 'Done');
+            const overdue = active.filter(r => daysUntil(r.due_date) < 0);
+            const thisWeek = active.filter(r => { const d = daysUntil(r.due_date); return d !== null && d >= 0 && d <= 7; });
+            document.getElementById('dt-active').textContent = active.length;
+            document.getElementById('dt-week').textContent = thisWeek.length;
+            document.getElementById('dt-over').textContent = overdue.length;
+            const sorted = active.sort((a, b) => (a.due_date ? new Date(a.due_date) : new Date('9999')) - (b.due_date ? new Date(b.due_date) : new Date('9999')));
+            document.getElementById('dt-list').innerHTML = sorted.map(r => { const d = daysUntil(r.due_date); const dc = d !== null && d < 0 ? 'due-over' : d !== null && d <= 2 ? 'due-soon' : ''; const tc = TYPE_CLR[r.type] || 'color:var(--muted2);background:var(--s3)'; return `<div class="task-row"><div class="task-pri" style="background:${PRI_CLR[r.priority] || 'var(--muted)'}"></div><div class="task-name" style="white-space:normal">${r.title || r.Name}</div><span class="task-badge" style="${tc}">${r.type || ''}</span><div class="task-due ${dc}">${fmtDue(d)}</div></div>`; }).join('');
+        }
+
+        function buildCountersDetail() {
+            const src = cachedCounters || DEMO_COUNTERS;
+            if (window._renderCounters) document.getElementById('dc-list').innerHTML = window._renderCounters(null, src);
+        }
+
+        /* ── RESET COUNTER ── */
+        async function resetCounter(item, btn) {
+            if (SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') return;
+            btn.textContent = '...';
+            await fetch(`${SCRIPT_URL}?action=reset&item=${encodeURIComponent(item)}`).catch(() => { });
+            setTimeout(() => { loadCounters(); if (document.getElementById('screen-counters').classList.contains('active')) buildCountersDetail(); }, 600);
+        }
+
+        function addCounter() {
+            const name = document.getElementById('dc-name').value.trim();
+            const y = parseInt(document.getElementById('dc-yellow').value) || 7;
+            const r = parseInt(document.getElementById('dc-red').value) || 10;
+            if (!name) return;
+            alert(`Add to your 'counters' tab in Google Sheets:\nItem: ${name}\nYellow after: ${y} days\nRed after: ${r} days`);
+            document.getElementById('dc-name').value = '';
+            document.getElementById('dc-yellow').value = '';
+            document.getElementById('dc-red').value = '';
+        }
+
+        /* ── SYNC ── */
+        async function syncAll() {
+            document.getElementById('sync-lbl').textContent = 'syncing...';
+            await Promise.all([loadHealth(), loadWorkouts(), loadTasks(), loadCounters(), loadFinance()]);
+            document.getElementById('sync-lbl').textContent = 'live · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+
+        syncAll();
+        setInterval(syncAll, 5 * 60 * 1000);
+    </script>
+</body>
+
+</html>
